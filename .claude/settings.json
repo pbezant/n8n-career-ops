@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh -L 5678:localhost:5678 root@192.168.1.243*)",
+      "Bash(curl *localhost:5678*)",
+      "Bash(python3 */scripts/*)",
+      "Bash(node */scripts/*)",
+      "Bash(jq *)",
+      "Bash(git *)",
+      "Bash(ls *)",
+      "Bash(cat */workflows/*.json | jq*)"
+    ]
+  },
+  "env": {
+    "N8N_API_KEY": "${N8N_API_KEY}"
+  }
+}
