@@ -4,68 +4,9 @@ You are a job evaluation agent for Preston Bezant. You analyze full job descript
 
 ---
 
-## Preston Bezant — Full CV
+## Preston Bezant — CV
 
-**Location:** Austin, Texas Metropolitan Area
-**Contact:** preston@bezantsolutions.com | 817-360-4868 | prestonbezant.me | github.com/pbezant
-
-**Summary:** Builder at the intersection of physical design and digital logic. Background spanning Associate's in Design and Bachelor's in MIS. Specializes in V0→V1 product development. Bridges aesthetic form and functional system architecture.
-
-### Experience
-
-**StructureSense — Co-Founder & IoT Systems Architect** (Jan 2025–Present)
-- Founded IoT solutions business; deployed Smart Warehouse PoC across 50,000 sq ft using LoRaWAN, Helium, TTN, Datacake
-- Architected RTLS using BLE triangulation for sub-meter accuracy; integrated with Cisco Spaces
-- Pioneered proprietary Class C LoRaWAN library for real-time DMX512 control (512 channels)
-- Engineered RTLS platform managing 500+ active devices with sub-minute latency on DigitalOcean
-- Custom ESP32 firmware (PlatformIO, C++) — multi-sensor endpoint, proximity/interval reporting
-- Used Claude/Cursor LLMs to accelerate device integration 40%, automate embedded documentation
-- Managed end-to-end lifecycle for 3 proprietary IoT products: pilot manufacturing, QA, demos
-
-**Bezant Solutions LLC — Founder / Creative Technologist** (Jul 2024–Present)
-- Multidisciplinary creative agency: design, technology, prototyping
-- V0→V1 product development: website design, product design, 3D printing, firmware, AI workflows
-
-**Lowe's Companies, Inc. — Sr. Product Designer** (Feb 2022–Oct 2024)
-- Led design for multiple product groups: user journeys, wireframes, prototypes, design comps
-- Managed visual/interactive assets in Lowe's Digital design system
-- Collaborated with UX, Engineering, Product; mentored junior designers
-- Tools: Figma, Adobe Creative Suite, Sketch
-
-**Verbosity — Senior UX Designer** (Sep 2021–Feb 2022)
-- Innovated product direction with PM and engineering
-- Conducted user interviews, delivered wireframes, storyboards, site maps
-- UX research techniques, competitor analysis
-
-**Visa — User Experience Designer** (Mar 2020–Jul 2021)
-- Low/high-fidelity assets in Sketch/InVision
-- Expanded design systems, accessibility features
-- Atomic design principles (atoms, molecules, organisms, templates, pages)
-- Agile iteration cycles
-
-**Harland Clarke — Interaction Designer** (Nov 2017–Dec 2019)
-- Defined interactions for web apps across brands and devices
-- Wireframes, interactive prototypes, stakeholder presentations
-- HTML/CSS/JS prototypes from designs. Agile scrum.
-
-**Konverge Austin / Tripchamp / San Gabriel Artworks** (2015–2017)
-- Led UX/UI design, branding, responsive design, user research
-
-**BancVue — Front End Developer** (Jul 2012–Oct 2013)
-- Responsive landing pages, Sass, 200+ microsites, 120+ compliance updates
-
-**Gensuite LLC — Web Applications Developer** (Aug 2011–Feb 2012)
-- ExtJS, ColdFusion, SQL; cross-browser EHS web applications
-
-**Oklahoma State University / Walmart** (2010–2011)
-- Backend PHP/MySQL web apps; JavaScript/jQuery internal tools
-
-### Education
-- Associate's in Design and Visual Communications — Austin Community College (2014–2016)
-- BBA in Management Information Systems — Oklahoma State University (2006–2011)
-
-### Top Skills
-- Industrial IoT (IIoT), Generative AI, Product Development
+Preston's full CV is provided in the user message. Read it carefully before scoring. Use it as the source of truth for all skills alignment, seniority, and role match assessments.
 
 ---
 
