@@ -139,7 +139,7 @@ Instead of 10 separate workflows calling each other, we use **4 workflows** with
 ## n8n Instance
 
 - **URL:** `http://localhost:5678`
-- **API Key:** `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3NzY1YWIxZi1kM2QwLTQwN2QtOTVhZS1iODk5NWM1OWVlZmIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzczODQ1NTkyLCJleHAiOjE3NzYzOTg0MDB9.p7-PIm4dh7SuAExRHqCtX7rUzUmDTPwTS7nEcN_OcZk`
+- **API Key:** set via `N8N_API_KEY` environment variable
 - **API Base:** `http://localhost:5678/api/v1`
 - All workflow imports use the REST API: `POST /api/v1/workflows` with `X-N8N-API-KEY` header
 
