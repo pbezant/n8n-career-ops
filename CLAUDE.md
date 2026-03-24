@@ -18,7 +18,7 @@ ssh -L 5678:localhost:5678 root@192.168.1.243
 
 | # | Workflow | n8n ID | Trigger | Agents |
 |---|---------|--------|---------|--------|
-| 01 | Core Pipeline | `u1bV8KbKeXtNM8Xa` | Cron 7am daily | Pre-Screen → Evaluator → CV Gen → Cover Letter → Apply Prep |
+| 01 | Core Pipeline | `u1bV8KbKeXtNM8Xa` | Cron 7am daily + Gmail job alert emails | Pre-Screen → Evaluator → CV Gen → Cover Letter → Apply Prep |
 | 02 | Ad-Hoc Pipeline | `vEkezsBAtnIZu2lx` | Webhook `POST /webhook/adhoc-eval` | Evaluator → CV Gen → Cover Letter |
 | 03 | Interview Prep | `i0jSDZ7RUx4b2ZqW` | Webhook `POST /webhook/interview-prep` | Deep Research → Interview Prep |
 | 04 | Comparison | `kxMTsL7S1BpDWTn0` | Webhook `POST /webhook/compare` | Comparison Agent |
