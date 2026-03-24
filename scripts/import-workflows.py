@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 import json
+import os
 import urllib.request
 import urllib.error
 import sys
 
-API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3NzY1YWIxZi1kM2QwLTQwN2QtOTVhZS1iODk5NWM1OWVlZmIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzczODQ1NTkyLCJleHAiOjE3NzYzOTg0MDB9.p7-PIm4dh7SuAExRHqCtX7rUzUmDTPwTS7nEcN_OcZk"
+API_KEY = os.environ.get("N8N_API_KEY")
+if not API_KEY:
+    print("ERROR: N8N_API_KEY environment variable not set")
+    sys.exit(1)
 BASE_URL = "http://localhost:5678/api/v1"
 
 WORKFLOWS = [
