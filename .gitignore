@@ -1,0 +1,6 @@
+scripts/.env
+scripts/node_modules/
+*.pdf
+temp/
+.DS_Store
+client_secret*.json

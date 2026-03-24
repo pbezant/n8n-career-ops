@@ -1,0 +1,270 @@
+{
+  "name": "03 - Career-Ops: Interview Prep",
+  "nodes": [
+    {
+      "id": "webhook-interview",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "interview-prep",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "early-response-interview",
+      "name": "Early Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [220, 300],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={ \"status\": \"accepted\", \"message\": \"Generating interview prep. Results will appear in Applications tab and Discord.\" }",
+        "options": { "responseCode": 202, "responseHeaders": { "entries": [{ "name": "Content-Type", "value": "application/json" }] } }
+      }
+    },
+    {
+      "id": "validate-job-id",
+      "name": "Validate Job ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300],
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst jobId = (body.job_id || '').trim();\nif (!jobId) throw new Error('Must provide job_id in request body');\nreturn [{ json: { jobId } }];"
+      }
+    },
+    {
+      "id": "read-pipeline-row",
+      "name": "Read Pipeline Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [660, 300],
+      "parameters": {
+        "operation": "read",
+        "documentId": { "__rl": true, "mode": "id", "value": "CAREER_OPS_SHEET_ID" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Pipeline" },
+        "filtersUI": {
+          "values": [{ "lookupColumn": "ID", "lookupValue": "={{ $json.jobId }}" }]
+        },
+        "options": {}
+      },
+      "credentials": { "googleSheetsOAuth2Api": { "id": "ng8zlg2pDNctkqmp", "name": "Google Sheets account" } }
+    },
+    {
+      "id": "read-eval-row",
+      "name": "Read Evaluation Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [660, 460],
+      "parameters": {
+        "operation": "read",
+        "documentId": { "__rl": true, "mode": "id", "value": "CAREER_OPS_SHEET_ID" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Evaluations" },
+        "filtersUI": {
+          "values": [{ "lookupColumn": "Job ID", "lookupValue": "={{ $('Validate Job ID').first().json.jobId }}" }]
+        },
+        "options": {}
+      },
+      "credentials": { "googleSheetsOAuth2Api": { "id": "ng8zlg2pDNctkqmp", "name": "Google Sheets account" } }
+    },
+    {
+      "id": "merge-context",
+      "name": "Merge Job Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 380],
+      "parameters": {
+        "jsCode": "const pipelineRow = $('Read Pipeline Row').all()[0]?.json || {};\nconst evalRow = $('Read Evaluation Row').all()[0]?.json || {};\n\nif (!pipelineRow.ID && !pipelineRow.id) {\n  throw new Error('Job ID not found in Pipeline sheet. Run evaluation first.');\n}\n\nlet evalData = {};\ntry { evalData = JSON.parse(evalRow['Full Report'] || '{}'); } catch(e) {}\n\nreturn [{ json: {\n  jobId: pipelineRow.ID || pipelineRow.id,\n  company: pipelineRow.Company,\n  title: pipelineRow.Title,\n  url: pipelineRow.URL,\n  grade: evalRow.Grade,\n  overall: evalRow['Overall Score'],\n  archetype: evalRow.Archetype,\n  summary: evalRow['Executive Summary'],\n  gaps: evalRow.Gaps,\n  cvMatch: evalRow['CV Match'],\n  evalData,\n  keywords: (evalData.keywords || []).join(', ')\n} }];"
+      }
+    },
+    {
+      "id": "fetch-jd-interview",
+      "name": "Fetch Job Description",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 380],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "options": { "timeout": 15000 }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "extract-jd-interview",
+      "name": "Extract JD for Interview",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 380],
+      "parameters": {
+        "jsCode": "const sourceItem = $('Merge Job Context').first();\nconst htmlResponse = $input.first().json;\nlet jdText = '';\n\nif (!htmlResponse.error && htmlResponse) {\n  const html = typeof htmlResponse === 'string' ? htmlResponse : JSON.stringify(htmlResponse);\n  jdText = html\n    .replace(/<script[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<style[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ')\n    .replace(/\\s+/g, ' ').trim().substring(0, 6000);\n}\n\nreturn [{ json: { ...sourceItem.json, jdText } }];"
+      }
+    },
+    {
+      "id": "deep-research-agent",
+      "name": "Deep Research AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [1540, 380],
+      "parameters": {
+        "agent": "toolsAgent",
+        "text": "={{ 'Research this company thoroughly for a job interview at:\\n\\nCompany: ' + $json.company + '\\nRole: ' + $json.title + '\\nWebsite: ' + $json.url + '\\n\\nConduct research to gather: recent news, funding, leadership, product details, tech stack, culture, red flags, and personalization hooks for the interview.' }}",
+        "systemMessage": "You are a deep research agent preparing a job candidate (Preston Bezant) for an interview. Use the HTTP tool to search the web for information about the company.\n\nResearch targets:\n1. Recent company news (last 3 months)\n2. Funding rounds and investors\n3. Leadership team and hiring manager if possible\n4. Core product and tech stack\n5. Culture and values (Glassdoor, Blind, LinkedIn)\n6. Competitors and market position\n7. Recent job postings (signal for growth areas)\n8. Any red flags (layoffs, legal issues, negative reviews)\n9. Preston-specific match points\n10. Personalization hooks for interview conversation\n\nSearch strategies:\n- Search '[Company] news 2024 2025'\n- Search '[Company] funding raise'\n- Search '[Company] CEO leadership'\n- Search '[Company] glassdoor review culture'\n- Search '[Company] tech stack engineering'\n\nOutput ONLY this JSON (no markdown):\n{\"company_overview\":\"...\",\"founded\":\"...\",\"size\":\"...\",\"stage\":\"...\",\"recent_news\":[\"...\"],\"funding\":{\"total_raised\":\"...\",\"last_round\":\"...\",\"investors\":[]},\"leadership\":{\"ceo\":\"...\",\"cto\":\"...\",\"hiring_manager_guess\":\"...\"},\"product\":{\"description\":\"...\",\"tech_stack\":[],\"key_differentiator\":\"...\"},\"culture\":{\"values\":[],\"work_style\":\"...\",\"glassdoor_rating\":\"\"},\"red_flags\":[],\"personalization_hooks\":[],\"competitors\":[],\"market_position\":\"...\",\"sources\":[]}\n",
+        "options": {}
+      }
+    },
+    {
+      "id": "http-tool-research",
+      "name": "HTTP Request Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [1540, 580],
+      "parameters": {
+        "method": "GET",
+        "url": "https://serpapi.com/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "engine", "value": "google" },
+            { "name": "num", "value": "5" },
+            { "name": "api_key", "value": "={{ $credentials.apiKey }}" }
+          ]
+        },
+        "description": "Search the web for information. Pass 'q' as the search query in the body.",
+        "parametersToSend": "body",
+        "bodyParameters": {
+          "parameters": [{ "name": "q", "value": "" }]
+        },
+        "placeholderDefinitions": {
+          "values": [{ "name": "q", "description": "The search query to look up on Google" }]
+        }
+      }
+    },
+    {
+      "id": "gemini-deep-research",
+      "name": "Gemini Flash Lite - Research",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [1760, 380],
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-lite",
+        "options": { "temperature": 0.2, "maxOutputTokens": 4096 }
+      },
+      "credentials": { "googlePalmApi": { "id": "T6vrBWXANAVPKppK", "name": "Google Gemini(PaLM) Api account" } }
+    },
+    {
+      "id": "interview-prep-agent",
+      "name": "Interview Prep AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [1980, 380],
+      "parameters": {
+        "agent": "conversationalAgent",
+        "text": "={{ 'Generate interview preparation materials for Preston Bezant.\\n\\n**Job Context:**\\nCompany: ' + $('Extract JD for Interview').first().json.company + '\\nRole: ' + $('Extract JD for Interview').first().json.title + '\\nGrade: ' + $('Extract JD for Interview').first().json.grade + '\\nArchetype: ' + $('Extract JD for Interview').first().json.archetype + '\\nEval Summary: ' + $('Extract JD for Interview').first().json.summary + '\\nGaps to Address: ' + $('Extract JD for Interview').first().json.gaps + '\\nKeywords to hit: ' + $('Extract JD for Interview').first().json.keywords + '\\n\\n**Job Description:**\\n' + $('Extract JD for Interview').first().json.jdText + '\\n\\n**Research Findings:**\\n' + ($input.first().json.output || '{}') }}",
+        "systemMessage": "You are an interview preparation agent for Preston Bezant (Senior Product Designer / Creative Technologist / IoT Engineer).\n\nGenerate comprehensive interview prep including:\n1. 10-15 likely interview questions (behavioral + technical)\n2. STAR-format answers for each using Preston's real experience\n3. 5 smart questions for Preston to ask the interviewer\n4. Key talking points based on research findings\n5. Red flags to watch for and how to probe\n6. Opening and closing statements\n\nPreston's STAR Story Bank:\n- Led end-to-end redesign of Lowe's Pro Services tool → 30% increase in task completion\n- Designed Lowe's Digital Design System from scratch → adopted across 12 product teams\n- Co-founded StructureSense: deployed LoRaWAN + RTLS across 50K sqft manufacturing facility\n- Built n8n AI automation workflows for client businesses → saved 15+ hrs/week\n- Visa Design Systems: standardized 200+ components for global product teams\n- BancVue Front-End: shipped responsive banking UX used by 300K+ credit union members\n\nOutput ONLY this JSON (no markdown):\n{\"interview_questions\":[{\"question\":\"...\",\"type\":\"behavioral|technical|situational\",\"star_answer\":{\"situation\":\"...\",\"task\":\"...\",\"action\":\"...\",\"result\":\"...\"},\"tips\":\"...\"}],\"questions_to_ask\":[{\"question\":\"...\",\"why\":\"...\"}],\"key_talking_points\":[],\"opening_statement\":\"...\",\"closing_statement\":\"...\",\"red_flags_to_watch\":[],\"company_specific_hooks\":[],\"salary_negotiation_notes\":\"Start at $160K, walk at $115K. Emphasize rare IoT+UX combo.\"}",
+        "options": {}
+      }
+    },
+    {
+      "id": "gemini-interview-prep",
+      "name": "Gemini Flash Lite - Interview",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [1980, 580],
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-lite",
+        "options": { "temperature": 0.4, "maxOutputTokens": 8192 }
+      },
+      "credentials": { "googlePalmApi": { "id": "T6vrBWXANAVPKppK", "name": "Google Gemini(PaLM) Api account" } }
+    },
+    {
+      "id": "write-interview-prep",
+      "name": "Write Interview Prep to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2200, 380],
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "mode": "id", "value": "CAREER_OPS_SHEET_ID" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Applications" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Interview Prep JSON": "={{ $input.first().json.output || '{}' }}",
+            "Research JSON": "={{ $('Deep Research AI Agent').first().json.output || '{}' }}"
+          }
+        },
+        "matchingColumns": ["Job ID"],
+        "options": {}
+      },
+      "credentials": { "googleSheetsOAuth2Api": { "id": "ng8zlg2pDNctkqmp", "name": "Google Sheets account" } }
+    },
+    {
+      "id": "update-pipeline-interview",
+      "name": "Update Pipeline Interview",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2420, 380],
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "mode": "id", "value": "CAREER_OPS_SHEET_ID" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Pipeline" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": { "Status": "Interview Prep Ready" }
+        },
+        "matchingColumns": ["ID"],
+        "options": {}
+      },
+      "credentials": { "googleSheetsOAuth2Api": { "id": "ng8zlg2pDNctkqmp", "name": "Google Sheets account" } }
+    },
+    {
+      "id": "discord-interview",
+      "name": "Discord Notify",
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [2640, 380],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "guildId": { "__rl": true, "mode": "id", "value": "YOUR_DISCORD_SERVER_ID" },
+        "channelId": { "__rl": true, "mode": "id", "value": "YOUR_DISCORD_CHANNEL_ID" },
+        "content": "={{ '🎯 **Interview Prep Ready**\\n\\n**' + $('Extract JD for Interview').first().json.company + '** — ' + $('Extract JD for Interview').first().json.title + '\\nGrade: **' + $('Extract JD for Interview').first().json.grade + '**\\n\\nResearch & prep materials written to the Applications tab. Good luck!' }}"
+      },
+      "credentials": { "discordBotApi": { "id": "PeIukwvkJqSyArKV", "name": "Discord Bot account" } },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": { "main": [[{ "node": "Early Response", "type": "main", "index": 0 }]] },
+    "Early Response": { "main": [[{ "node": "Validate Job ID", "type": "main", "index": 0 }]] },
+    "Validate Job ID": {
+      "main": [
+        [{ "node": "Read Pipeline Row", "type": "main", "index": 0 }],
+        [{ "node": "Read Evaluation Row", "type": "main", "index": 0 }]
+      ]
+    },
+    "Read Pipeline Row": { "main": [[{ "node": "Merge Job Context", "type": "main", "index": 0 }]] },
+    "Read Evaluation Row": { "main": [[{ "node": "Merge Job Context", "type": "main", "index": 1 }]] },
+    "Merge Job Context": { "main": [[{ "node": "Fetch Job Description", "type": "main", "index": 0 }]] },
+    "Fetch Job Description": { "main": [[{ "node": "Extract JD for Interview", "type": "main", "index": 0 }]] },
+    "Extract JD for Interview": { "main": [[{ "node": "Deep Research AI Agent", "type": "main", "index": 0 }]] },
+    "Deep Research AI Agent": { "main": [[{ "node": "Interview Prep AI Agent", "type": "main", "index": 0 }]] },
+    "Gemini Flash Lite - Research": { "ai_languageModel": [[{ "node": "Deep Research AI Agent", "type": "ai_languageModel", "index": 0 }]] },
+    "HTTP Request Tool": { "ai_tool": [[{ "node": "Deep Research AI Agent", "type": "ai_tool", "index": 0 }]] },
+    "Interview Prep AI Agent": { "main": [[{ "node": "Write Interview Prep to Sheet", "type": "main", "index": 0 }]] },
+    "Gemini Flash Lite - Interview": { "ai_languageModel": [[{ "node": "Interview Prep AI Agent", "type": "ai_languageModel", "index": 0 }]] },
+    "Write Interview Prep to Sheet": { "main": [[{ "node": "Update Pipeline Interview", "type": "main", "index": 0 }]] },
+    "Update Pipeline Interview": { "main": [[{ "node": "Discord Notify", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "meta": { "templateCredsSetupCompleted": true }
+}
