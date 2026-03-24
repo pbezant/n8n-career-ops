@@ -4,3 +4,5 @@ scripts/node_modules/
 temp/
 .DS_Store
 client_secret*.json
+.claude/settings.local.json
+.claude/worktrees/
